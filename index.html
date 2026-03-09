@@ -6,17 +6,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>AI Robot Assistant</title>
+
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon-192.png">
 <meta name="theme-color" content="#7c3aed">
+
 <style>
 
-*{
-box-sizing:border-box;
-}
+*{box-sizing:border-box;}
 
 body{
-font-family:system-ui,-apple-system,Segoe UI,Roboto;
+font-family:system-ui,Segoe UI,Roboto;
 background:linear-gradient(180deg,#faf5ff,#f8fafc);
 margin:0;
 padding:25px 15px;
@@ -24,15 +24,9 @@ color:#111827;
 transition:.3s;
 }
 
-.dark{
-background:#0f172a;
-color:#e5e7eb;
-}
+.dark{background:#0f172a;color:#e5e7eb;}
 
-.container{
-max-width:720px;
-margin:auto;
-}
+.container{max-width:720px;margin:auto;}
 
 /* HEADER */
 
@@ -60,9 +54,7 @@ justify-content:center;
 animation:float 3s ease-in-out infinite;
 }
 
-.logo img{
-width:34px;
-}
+.logo img{width:34px;}
 
 @keyframes float{
 0%{transform:translateY(0)}
@@ -94,9 +86,7 @@ margin-bottom:20px;
 box-shadow:0 6px 20px rgba(0,0,0,0.05);
 }
 
-.dark .card{
-background:#1e293b;
-}
+.dark .card{background:#1e293b;}
 
 /* TEXTAREA */
 
@@ -153,6 +143,20 @@ color:white;
 cursor:pointer;
 }
 
+/* MIC RECORDING */
+
+.recording{
+background:#ef4444 !important;
+color:white;
+animation:pulse 1s infinite;
+}
+
+@keyframes pulse{
+0%{transform:scale(1)}
+50%{transform:scale(1.08)}
+100%{transform:scale(1)}
+}
+
 /* CHAT */
 
 .chat{
@@ -169,28 +173,34 @@ line-height:1.5;
 box-shadow:0 3px 10px rgba(0,0,0,0.05);
 }
 
-.client{
-background:#f1f5f9;
-}
+.client{background:#f1f5f9;}
+.ai{background:#ede9fe;margin-right:auto;}
 
-.ai{
-background:#ede9fe;
-margin-right:auto;
-}
-
-.dark .client{
-background:#334155;
-}
-
-.dark .ai{
-background:#4c1d95;
-margin-right:auto;
-}
+.dark .client{background:#334155;}
+.dark .ai{background:#4c1d95;}
 
 .lang{
 font-size:12px;
 color:#6b7280;
 margin-top:6px;
+}
+
+/* QUICK REPLIES */
+
+.quick{
+display:flex;
+gap:8px;
+flex-wrap:wrap;
+margin-top:10px;
+}
+
+.quick button{
+padding:6px 12px;
+border-radius:20px;
+border:1px solid #ddd;
+background:#f3f4f6;
+cursor:pointer;
+font-size:13px;
 }
 
 </style>
@@ -227,6 +237,17 @@ margin-top:6px;
 <div class="controls">
 <button class="btn" onclick="pasteClient()">Paste</button>
 <button class="btn" onclick="resetClient()">Reset</button>
+
+<select id="manualLang" class="btn">
+<option value="auto">Auto</option>
+<option value="en">English</option>
+<option value="nl">Dutch</option>
+<option value="de">German</option>
+<option value="ar">Arabic</option>
+<option value="fr">French</option>
+<option value="es">Spanish</option>
+</select>
+
 </div>
 
 <textarea id="clientText" placeholder="Paste client message"></textarea>
@@ -246,10 +267,16 @@ margin-top:6px;
 
 <div class="controls">
 <button class="btn" onclick="resetReply()">Reset</button>
-<button class="btn" onclick="startVoice()">🎤 Voice</button>
+<button class="btn" id="micBtn" onclick="startVoice()">🎤 Voice</button>
 </div>
 
 <textarea id="replyText" placeholder="Write your reply"></textarea>
+
+<div class="quick">
+<button onclick="quick('Yes, we will check it.')">Yes</button>
+<button onclick="quick('No problem.')">No problem</button>
+<button onclick="quick('Delivery will be tomorrow.')">Delivery tomorrow</button>
+</div>
 
 <div class="chat">
 <div class="bubble ai" id="finalReply"></div>
@@ -266,17 +293,6 @@ margin-top:6px;
 
 let clientLang="auto";
 
-const flags={
-en:"🇬🇧",
-nl:"🇳🇱",
-ar:"🇸🇦",
-de:"🇩🇪",
-fr:"🇫🇷",
-es:"🇪🇸"
-};
-
-/* DARK MODE */
-
 function toggleDark(){
 document.body.classList.toggle("dark");
 }
@@ -286,7 +302,6 @@ document.body.classList.toggle("dark");
 clientText.addEventListener("input",async function(){
 
 let text=this.value;
-
 if(text.length<2)return;
 
 let res=await fetch(
@@ -297,15 +312,17 @@ let data=await res.json();
 
 clientLang=data[2];
 
+let manual=document.getElementById("manualLang").value;
+if(manual!=="auto") clientLang=manual;
+
 let english=data[0].map(x=>x[0]).join("");
 
 englishText.innerText=english;
 
-let flag=flags[clientLang]||"🌐";
-
-langIndicator.innerHTML=flag+" "+clientLang;
+langIndicator.innerHTML=clientLang;
 
 });
+
 
 /* FAST TRANSLATION */
 
@@ -318,11 +335,10 @@ clearTimeout(timer);
 timer=setTimeout(async()=>{
 
 let reply=this.value;
-
 if(reply.length<2)return;
 
 let res=await fetch(
-`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${clientLang}&dt=t&q=${encodeURIComponent(reply)}`
+`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${clientLang}&dt=t&q=${encodeURIComponent(reply)}`
 );
 
 let data=await res.json();
@@ -331,11 +347,17 @@ let final=data[0].map(x=>x[0]).join("");
 
 finalReply.innerText=final;
 
-saveHistory();
-
 },300);
 
 });
+
+
+/* QUICK REPLY */
+
+function quick(text){
+replyText.value=text;
+replyText.dispatchEvent(new Event("input"));
+}
 
 /* COPY */
 
@@ -346,13 +368,9 @@ navigator.clipboard.writeText(finalReply.innerText);
 /* PASTE */
 
 async function pasteClient(){
-
 const text=await navigator.clipboard.readText();
-
 clientText.value=text;
-
 clientText.dispatchEvent(new Event("input"));
-
 }
 
 /* RESET */
@@ -368,52 +386,56 @@ replyText.value="";
 finalReply.innerText="";
 }
 
+
 /* VOICE */
 
 function startVoice(){
 
-const rec = new webkitSpeechRecognition();
+const btn=document.getElementById("micBtn");
 
-rec.lang = "ur-PK";   // Urdu + Hindi + English detect
-rec.interimResults = false;
+const rec=new webkitSpeechRecognition();
 
-rec.onresult = async function(e){
+rec.continuous=true;
+rec.interimResults=false;
+rec.lang="en-US";
 
-let speech = e.results[0][0].transcript;
+btn.classList.add("recording");
 
-/* STEP 1 — speech → English */
+rec.onresult=async function(e){
 
-let r1 = await fetch(
+let speech=e.results[e.results.length-1][0].transcript;
+
+/* speech → English */
+
+let r1=await fetch(
 `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(speech)}`
 );
 
-let d1 = await r1.json();
+let d1=await r1.json();
+let english=d1[0].map(x=>x[0]).join("");
 
-let english = d1[0].map(x=>x[0]).join("");
+replyText.value=english;
 
-replyText.value = english;
+/* English → client language */
 
-
-/* STEP 2 — English → client language */
-
-let r2 = await fetch(
+let r2=await fetch(
 `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${clientLang}&dt=t&q=${encodeURIComponent(english)}`
 );
 
-let d2 = await r2.json();
+let d2=await r2.json();
+let final=d2[0].map(x=>x[0]).join("");
 
-let final = d2[0].map(x=>x[0]).join("");
+finalReply.innerText=final;
 
-finalReply.innerText = final;
+};
 
-saveHistory();
-
+rec.onend=function(){
+btn.classList.remove("recording");
 };
 
 rec.start();
 
 }
-
 
 </script>
 
