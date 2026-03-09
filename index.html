@@ -372,15 +372,41 @@ finalReply.innerText="";
 
 function startVoice(){
 
-const rec=new webkitSpeechRecognition();
+const rec = new webkitSpeechRecognition();
 
-rec.lang="en-US";
+rec.lang = "ur-PK";   // Urdu + Hindi + English detect
+rec.interimResults = false;
 
-rec.onresult=function(e){
+rec.onresult = async function(e){
 
-replyText.value=e.results[0][0].transcript;
+let speech = e.results[0][0].transcript;
 
-replyText.dispatchEvent(new Event("input"));
+/* STEP 1 — speech → English */
+
+let r1 = await fetch(
+`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(speech)}`
+);
+
+let d1 = await r1.json();
+
+let english = d1[0].map(x=>x[0]).join("");
+
+replyText.value = english;
+
+
+/* STEP 2 — English → client language */
+
+let r2 = await fetch(
+`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${clientLang}&dt=t&q=${encodeURIComponent(english)}`
+);
+
+let d2 = await r2.json();
+
+let final = d2[0].map(x=>x[0]).join("");
+
+finalReply.innerText = final;
+
+saveHistory();
 
 };
 
@@ -388,19 +414,6 @@ rec.start();
 
 }
 
-/* HISTORY */
-
-function saveHistory(){
-localStorage.setItem("lastReply",finalReply.innerText);
-}
-
-window.onload=function(){
-
-let last=localStorage.getItem("lastReply");
-
-if(last) finalReply.innerText=last;
-
-}
 
 </script>
 
