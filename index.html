@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>AI Robot Assistant</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<meta name="theme-color" content="#7c3aed">
+<style>
+
+*{
+box-sizing:border-box;
+}
+
+body{
+font-family:system-ui,-apple-system,Segoe UI,Roboto;
+background:linear-gradient(180deg,#faf5ff,#f8fafc);
+margin:0;
+padding:25px 15px;
+color:#111827;
+transition:.3s;
+}
+
+.dark{
+background:#0f172a;
+color:#e5e7eb;
+}
+
+.container{
+max-width:720px;
+margin:auto;
+}
+
+/* HEADER */
+
+.header{
+display:flex;
+align-items:center;
+justify-content:space-between;
+margin-bottom:28px;
+}
+
+.left{
+display:flex;
+align-items:center;
+gap:14px;
+}
+
+.logo{
+width:56px;
+height:56px;
+border-radius:16px;
+background:linear-gradient(135deg,#9333ea,#6d28d9);
+display:flex;
+align-items:center;
+justify-content:center;
+animation:float 3s ease-in-out infinite;
+}
+
+.logo img{
+width:34px;
+}
+
+@keyframes float{
+0%{transform:translateY(0)}
+50%{transform:translateY(-4px)}
+100%{transform:translateY(0)}
+}
+
+.toggle{
+padding:8px 12px;
+border-radius:10px;
+border:1px solid #e5e7eb;
+background:white;
+cursor:pointer;
+}
+
+.dark .toggle{
+background:#1e293b;
+border:none;
+color:white;
+}
+
+/* CARD */
+
+.card{
+background:white;
+border-radius:16px;
+padding:20px;
+margin-bottom:20px;
+box-shadow:0 6px 20px rgba(0,0,0,0.05);
+}
+
+.dark .card{
+background:#1e293b;
+}
+
+/* TEXTAREA */
+
+textarea{
+width:100%;
+border:1px solid #e5e7eb;
+border-radius:12px;
+padding:14px;
+margin-top:10px;
+font-size:14px;
+min-height:90px;
+resize:none;
+outline:none;
+}
+
+.dark textarea{
+background:#0f172a;
+color:white;
+border:1px solid #334155;
+}
+
+/* BUTTONS */
+
+.controls{
+display:flex;
+gap:10px;
+margin-bottom:10px;
+flex-wrap:wrap;
+}
+
+.btn{
+height:38px;
+padding:0 16px;
+border-radius:10px;
+border:1px solid #e5e7eb;
+background:white;
+cursor:pointer;
+}
+
+.dark .btn{
+background:#0f172a;
+color:white;
+border:1px solid #334155;
+}
+
+.copy{
+margin-top:12px;
+height:42px;
+padding:0 22px;
+border:none;
+border-radius:10px;
+background:#7c3aed;
+color:white;
+cursor:pointer;
+}
+
+/* CHAT */
+
+.chat{
+margin-top:12px;
+display:flex;
+}
+
+.bubble{
+padding:14px 16px;
+border-radius:16px;
+font-size:14px;
+max-width:75%;
+line-height:1.5;
+box-shadow:0 3px 10px rgba(0,0,0,0.05);
+}
+
+.client{
+background:#f1f5f9;
+}
+
+.ai{
+background:#ede9fe;
+margin-right:auto;
+}
+
+.dark .client{
+background:#334155;
+}
+
+.dark .ai{
+background:#4c1d95;
+margin-right:auto;
+}
+
+.lang{
+font-size:12px;
+color:#6b7280;
+margin-top:6px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="header">
+
+<div class="left">
+
+<div class="logo">
+<img src="https://cdn-icons-png.flaticon.com/512/17115/17115952.png">
+</div>
+
+<div>
+<b style="font-size:22px;">AI Robot Assistant</b><br>
+<small>by Musaiyab</small>
+</div>
+
+</div>
+
+<button class="toggle" onclick="toggleDark()">🌙</button>
+
+</div>
+
+
+<div class="card">
+
+<b>Client Message</b>
+
+<div class="controls">
+<button class="btn" onclick="pasteClient()">Paste</button>
+<button class="btn" onclick="resetClient()">Reset</button>
+</div>
+
+<textarea id="clientText" placeholder="Paste client message"></textarea>
+
+<div class="lang" id="langIndicator"></div>
+
+<div class="chat">
+<div class="bubble client" id="englishText"></div>
+</div>
+
+</div>
+
+
+<div class="card">
+
+<b>Your Reply</b>
+
+<div class="controls">
+<button class="btn" onclick="resetReply()">Reset</button>
+<button class="btn" onclick="startVoice()">🎤 Voice</button>
+</div>
+
+<textarea id="replyText" placeholder="Write your reply"></textarea>
+
+<div class="chat">
+<div class="bubble ai" id="finalReply"></div>
+</div>
+
+<button class="copy" onclick="copyReply()">Copy Reply</button>
+
+</div>
+
+</div>
+
+
+<script>
+
+let clientLang="auto";
+
+const flags={
+en:"🇬🇧",
+nl:"🇳🇱",
+ar:"🇸🇦",
+de:"🇩🇪",
+fr:"🇫🇷",
+es:"🇪🇸"
+};
+
+/* DARK MODE */
+
+function toggleDark(){
+document.body.classList.toggle("dark");
+}
+
+/* CLIENT TRANSLATE */
+
+clientText.addEventListener("input",async function(){
+
+let text=this.value;
+
+if(text.length<2)return;
+
+let res=await fetch(
+`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(text)}`
+);
+
+let data=await res.json();
+
+clientLang=data[2];
+
+let english=data[0].map(x=>x[0]).join("");
+
+englishText.innerText=english;
+
+let flag=flags[clientLang]||"🌐";
+
+langIndicator.innerHTML=flag+" "+clientLang;
+
+});
+
+/* FAST TRANSLATION */
+
+let timer;
+
+replyText.addEventListener("input",function(){
+
+clearTimeout(timer);
+
+timer=setTimeout(async()=>{
+
+let reply=this.value;
+
+if(reply.length<2)return;
+
+let res=await fetch(
+`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${clientLang}&dt=t&q=${encodeURIComponent(reply)}`
+);
+
+let data=await res.json();
+
+let final=data[0].map(x=>x[0]).join("");
+
+finalReply.innerText=final;
+
+saveHistory();
+
+},300);
+
+});
+
+/* COPY */
+
+function copyReply(){
+navigator.clipboard.writeText(finalReply.innerText);
+}
+
+/* PASTE */
+
+async function pasteClient(){
+
+const text=await navigator.clipboard.readText();
+
+clientText.value=text;
+
+clientText.dispatchEvent(new Event("input"));
+
+}
+
+/* RESET */
+
+function resetClient(){
+clientText.value="";
+englishText.innerText="";
+langIndicator.innerText="";
+}
+
+function resetReply(){
+replyText.value="";
+finalReply.innerText="";
+}
+
+/* VOICE */
+
+function startVoice(){
+
+const rec=new webkitSpeechRecognition();
+
+rec.lang="en-US";
+
+rec.onresult=function(e){
+
+replyText.value=e.results[0][0].transcript;
+
+replyText.dispatchEvent(new Event("input"));
+
+};
+
+rec.start();
+
+}
+
+/* HISTORY */
+
+function saveHistory(){
+localStorage.setItem("lastReply",finalReply.innerText);
+}
+
+window.onload=function(){
+
+let last=localStorage.getItem("lastReply");
+
+if(last) finalReply.innerText=last;
+
+}
+
+</script>
+
+</body>
+</html>
