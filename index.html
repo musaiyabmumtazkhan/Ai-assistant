@@ -271,12 +271,7 @@ font-size:13px;
 </div>
 
 <textarea id="replyText" placeholder="Write your reply"></textarea>
-
-<div class="quick">
-<button onclick="quick('Yes, we will check it.')">Yes</button>
-<button onclick="quick('No problem.')">No problem</button>
-<button onclick="quick('Delivery will be tomorrow.')">Delivery tomorrow</button>
-</div>
+  
 
 <div class="chat">
 <div class="bubble ai" id="finalReply"></div>
@@ -397,7 +392,7 @@ const rec=new webkitSpeechRecognition();
 
 rec.continuous=true;
 rec.interimResults=false;
-rec.lang="en-US";
+rec.lang="ur-pk";
 
 btn.classList.add("recording");
 
@@ -441,3 +436,4 @@ rec.start();
 
 </body>
 </html>
+
