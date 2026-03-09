@@ -2,11 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI Robot Assistant</title>
-<link rel="manifest" href="manifest.json">
-<link rel="icon" href="icons/icon-192.png">
-<meta name="theme-color" content="#7c3aed">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:system-ui,Segoe UI,Roboto;background:linear-gradient(180deg,#faf5ff,#f8fafc);color:#111827;padding:20px;transition:.3s;}
@@ -27,8 +24,6 @@ body.dark textarea{background:#0f172a;color:white;border:1px solid #334155;}
 .btn{height:36px;padding:0 16px;border-radius:10px;border:1px solid #e5e7eb;background:white;cursor:pointer;}
 body.dark .btn{background:#0f172a;color:white;border:1px solid #334155;}
 .copy{margin-top:12px;height:42px;padding:0 22px;border:none;border-radius:10px;background:#7c3aed;color:white;cursor:pointer;}
-.recording{background:#ef4444 !important;color:white;animation:pulse 1s infinite;}
-@keyframes pulse{0%{transform:scale(1);}50%{transform:scale(1.08);}100%{transform:scale(1);}}
 .chat{margin-top:12px;display:flex;}
 .bubble{padding:14px 16px;border-radius:16px;font-size:14px;max-width:75%;line-height:1.5;box-shadow:0 3px 10px rgba(0,0,0,0.05);}
 .client{background:#f1f5f9;}
@@ -41,6 +36,7 @@ body.dark .ai{background:#4c1d95;}
 </style>
 </head>
 <body>
+
 <div class="container">
 
 <div class="header">
@@ -48,7 +44,7 @@ body.dark .ai{background:#4c1d95;}
 <div class="logo"><img src="https://cdn-icons-png.flaticon.com/512/17115/17115952.png"></div>
 <div><b style="font-size:22px;">AI Robot Assistant</b><br><small>by Musaiyab</small></div>
 </div>
-<button class="toggle" onclick="toggleDark()">🌙</button>
+<button class="toggle" onclick="document.body.classList.toggle('dark')">🌙</button>
 </div>
 
 <!-- Client Section -->
@@ -80,11 +76,7 @@ body.dark .ai{background:#4c1d95;}
 <button class="btn" id="micBtn" onclick="startVoice()">🎤 Voice</button>
 </div>
 <textarea id="replyText" placeholder="Write your reply"></textarea>
-<div class="quick">
-<button onclick="quick('Yes, we will check it.')">Yes</button>
-<button onclick="quick('No problem.')">No problem</button>
-<button onclick="quick('Delivery will be tomorrow.')">Delivery tomorrow</button>
-</div>
+
 <div class="chat"><div class="bubble ai" id="finalReply"></div></div>
 <button class="copy" onclick="copyReply()">Copy Reply</button>
 </div>
@@ -93,39 +85,28 @@ body.dark .ai{background:#4c1d95;}
 
 <script>
 let clientLang="auto";
-function toggleDark(){document.body.classList.toggle("dark");}
+const flags={en:"🇬🇧",nl:"🇳🇱",ar:"🇸🇦",de:"🇩🇪",fr:"🇫🇷",es:"🇪🇸"};
 
 /* Client Translate */
 clientText.addEventListener("input",async function(){
-let text=this.value;
-if(text.length<2) return;
-let res=await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(text)}`);
-let data=await res.json();
-clientLang=data[2];
-let manual=document.getElementById("manualLang").value;
-if(manual!=="auto") clientLang=manual;
-let english=data[0].map(x=>x[0]).join("");
-englishText.innerText=english;
-langIndicator.innerHTML=clientLang;
-});
+  let text=this.value;
+  if(text.length<2){englishText.innerText=""; finalReply.innerText=""; return;}
+  let res=await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(text)}`);
+  let data=await res.json();
+  let english=data[0].map(x=>x[0]).join("");
+  englishText.innerText=english;
+  clientLang=document.getElementById("manualLang").value!=="auto"?document.getElementById("manualLang").value:data[2];
 
-/* Reply Input + Translate + AI Rephrase */
-let timer;
-replyText.addEventListener("input",function(){
-clearTimeout(timer);
-timer=setTimeout(async()=>{
-let reply=this.value;
-if(reply.length<2) return;
+  // Translate english → clientLang
+  if(clientLang!=="en"){
+    let tr=await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${clientLang}&dt=t&q=${encodeURIComponent(english)}`);
+    let dtr=await tr.json();
+    finalReply.innerText=dtr[0].map(x=>x[0]).join("");
+  }else{
+    finalReply.innerText=english;
+  }
 
-// STEP 1: AI backend rephrase + spellcheck
-let aiResp=await fetch("/ai-rephrase",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:reply})});
-let polished=await aiResp.json(); // {text: "Polished English"}
-
-// STEP 2: Translate to client language
-let res2=await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${clientLang}&dt=t&q=${encodeURIComponent(polished.text)}`);
-let data2=await res2.json();
-finalReply.innerText=data2[0].map(x=>x[0]).join("");
-},300);
+  langIndicator.innerHTML=(flags[clientLang]||"🌐")+" "+clientLang;
 });
 
 /* Quick Reply */
@@ -138,36 +119,32 @@ function copyReply(){navigator.clipboard.writeText(finalReply.innerText);}
 async function pasteClient(){const text=await navigator.clipboard.readText();clientText.value=text;clientText.dispatchEvent(new Event("input"));}
 
 /* Reset */
-function resetClient(){clientText.value="";englishText.innerText="";langIndicator.innerText="";}
+function resetClient(){clientText.value="";englishText.innerText="";finalReply.innerText="";langIndicator.innerText="";}
 function resetReply(){replyText.value="";finalReply.innerText="";}
 
 /* Voice */
 function startVoice(){
-const btn=document.getElementById("micBtn");
-const rec=new webkitSpeechRecognition();
-rec.continuous=true; rec.interimResults=false; rec.lang="en-US";
-btn.classList.add("recording");
-rec.onresult=async function(e){
-let speech=e.results[e.results.length-1][0].transcript;
-
-// Speech → English
-let r1=await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(speech)}`);
-let d1=await r1.json();
-let english=d1[0].map(x=>x[0]).join("");
-replyText.value=english;
-
-// AI rephrase + spellcheck
-let aiResp=await fetch("/ai-rephrase",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:english})});
-let polished=await aiResp.json(); // {text:"Polished English"}
-
-// Translate polished → client language
-let r2=await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${clientLang}&dt=t&q=${encodeURIComponent(polished.text)}`);
-let d2=await r2.json();
-finalReply.innerText=d2[0].map(x=>x[0]).join("");
-};
-rec.onend=function(){btn.classList.remove("recording");};
-rec.start();
+  const btn=document.getElementById("micBtn");
+  const rec=new webkitSpeechRecognition();
+  rec.continuous=true; rec.interimResults=false; rec.lang="en-US";
+  btn.classList.add("recording");
+  rec.onresult=async function(e){
+    let speech=e.results[e.results.length-1][0].transcript;
+    replyText.value=speech;
+    replyText.dispatchEvent(new Event("input"));
+  };
+  rec.onend=function(){btn.classList.remove("recording");};
+  rec.start();
 }
+
+/* Reply Translate */
+replyText.addEventListener("input",async function(){
+  let text=this.value;
+  if(text.length<2){finalReply.innerText=""; return;}
+  let res=await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${clientLang}&dt=t&q=${encodeURIComponent(text)}`);
+  let data=await res.json();
+  finalReply.innerText=data[0].map(x=>x[0]).join("");
+});
 </script>
 </body>
 </html>
